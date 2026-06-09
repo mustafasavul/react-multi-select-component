@@ -1,10 +1,31 @@
 import React, { useState } from 'react';
 import DropdownMenu from './DropdownMenu';
-import { useCharacterSearch } from 'src/hooks/useCharacterSearch';
-import { useCharacterSelection } from 'src/hooks/useCharacterSelection';
+import { useCharacterSearch } from '../../hooks/useCharacterSearch';
+import { useCharacterSelection } from '../../hooks/useCharacterSelection';
 import SelectedItems from './SelectedItems';
 import Loader from '../Loader';
 import s from './index.module.css';
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export interface HighlightedPart {
+  text: string;
+  highlighted: boolean;
+}
+
+const getHighlightedParts = (name: string, query: string): HighlightedPart[] => {
+  if (!query) return [{ text: name, highlighted: false }];
+
+  const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+  return name
+    .split(regex)
+    .filter(Boolean)
+    .map((text) => ({
+      text,
+      highlighted: text.toLowerCase() === query.toLowerCase(),
+    }));
+};
 
 export const MultiSelectAutocomplete = () => {
   const [inputValue, setInputValue] = useState('');
@@ -25,12 +46,6 @@ export const MultiSelectAutocomplete = () => {
     }
   };
 
-  const highlightQuery = (name: string) => {
-    if (!inputValue) return name;
-    const regex = new RegExp(`(${inputValue})`, 'gi');
-    return name.replace(regex, '<mark>$1</mark>');
-  };
-
   return (
     <div className={s.multiSelectContainer}>
       {selectedCharacters.length > 0 && (
@@ -42,6 +57,7 @@ export const MultiSelectAutocomplete = () => {
 
       <input
         className={s.input}
+        aria-label="Search for a character"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onFocus={() => setIsDropdownOpen(true)}
@@ -61,7 +77,7 @@ export const MultiSelectAutocomplete = () => {
             selectedMenuItems={selectedCharacters}
             onSelectCharacter={handleSelectCharacter}
             onRemoveCharacter={handleRemoveCharacter}
-            highlightQuery={highlightQuery}
+            getHighlightedParts={(name) => getHighlightedParts(name, inputValue)}
           />
         )
       )}

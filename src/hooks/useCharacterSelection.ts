@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Character,
   SelectedCharacter,
-} from 'src/components/MultiSelectAutoComplete/interface';
+} from '../components/MultiSelectAutoComplete/interface';
 
 export const useCharacterSelection = () => {
   const [selectedCharacters, setSelectedCharacters] = useState<

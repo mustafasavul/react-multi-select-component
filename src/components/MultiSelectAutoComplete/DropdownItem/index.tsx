@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import s from './index.module.css';
 import { Character } from '../interface';
+import type { HighlightedPart } from '..';
 
 interface DropdownItemProps {
   dropdownItem: Character;
@@ -8,7 +9,7 @@ interface DropdownItemProps {
   isFocused: boolean;
   onSelectCharacter: (character: Character) => void;
   onRemoveCharacter: (id: number) => void;
-  highlightQuery: (name: string) => string;
+  getHighlightedParts: (name: string) => HighlightedPart[];
 }
 
 const DropdownItem: React.FC<DropdownItemProps> = ({
@@ -17,7 +18,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
   isFocused,
   onSelectCharacter,
   onRemoveCharacter,
-  highlightQuery,
+  getHighlightedParts,
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isImageVisible, setImageVisible] = useState(false);
@@ -35,13 +36,15 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
       }
     );
 
-    if (itemRef.current) {
-      observer.observe(itemRef.current);
+    const item = itemRef.current;
+
+    if (item) {
+      observer.observe(item);
     }
 
     return () => {
-      if (itemRef.current) {
-        observer.unobserve(itemRef.current);
+      if (item) {
+        observer.unobserve(item);
       }
     };
   }, []);
@@ -52,8 +55,10 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
     }
   }, [isFocused]);
 
-  const handleClick = (e) => {
-    if (e.target.type !== 'checkbox') {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') {
       if (isSelected) {
         onRemoveCharacter(dropdownItem.id);
       } else {
@@ -61,6 +66,19 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
       }
     }
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isSelected) {
+        onRemoveCharacter(dropdownItem.id);
+      } else {
+        onSelectCharacter(dropdownItem);
+      }
+    }
+  };
+
+  const highlightedParts = getHighlightedParts(dropdownItem.name);
 
   return (
     <div
@@ -70,6 +88,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
         isFocused ? s.focused : ''
       }`}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       role="button"
       aria-pressed={isSelected}
     >
@@ -77,6 +96,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
         <input
           type="checkbox"
           className={s.selectCheckbox}
+          aria-label={`Select ${dropdownItem.name}`}
           checked={isSelected}
           onChange={() => {}}
           onClick={(e) => e.stopPropagation()}
@@ -91,12 +111,15 @@ const DropdownItem: React.FC<DropdownItemProps> = ({
         )}
 
         <div className={s.dropdownItemInfoWrapper}>
-          <p
-            dangerouslySetInnerHTML={{
-              __html: highlightQuery(dropdownItem.name),
-            }}
-            className={s.dropdownItemsName}
-          />
+          <p className={s.dropdownItemsName}>
+            {highlightedParts.map((part, index) =>
+              part.highlighted ? (
+                <mark key={`${part.text}-${index}`}>{part.text}</mark>
+              ) : (
+                part.text
+              )
+            )}
+          </p>
           <p className={s.dropdownItemsInfo}>
             Episodes: {dropdownItem.episode.length}
           </p>

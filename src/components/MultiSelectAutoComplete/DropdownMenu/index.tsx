@@ -1,14 +1,15 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useEffectEvent, useState} from 'react';
 import s from './index.module.css';
 import DropdownItem from '../DropdownItem';
 import {Character, SelectedCharacter} from '../interface';
+import type { HighlightedPart } from '..';
 
 interface DropdownMenuProps {
   menuItems: Character[];
   selectedMenuItems: SelectedCharacter[];
   onSelectCharacter: (character: Character) => void;
   onRemoveCharacter: (id: number) => void;
-  highlightQuery: (name: string) => string;
+  getHighlightedParts: (name: string) => HighlightedPart[];
 }
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({
@@ -16,12 +17,24 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
                                                      selectedMenuItems,
                                                      onSelectCharacter,
                                                      onRemoveCharacter,
-                                                     highlightQuery,
+                                                     getHighlightedParts,
                                                    }) => {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const handleFocusedSelection = useEffectEvent((index: number) => {
+    const selectedItem = menuItems[index];
+    if (!selectedItem) return;
+
+    const isSelected = selectedMenuItems.some(item => item.id === selectedItem.id);
+    isSelected ? onRemoveCharacter(selectedItem.id) : onSelectCharacter(selectedItem);
+  });
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (menuItems.length === 0) {
+        setFocusedIndex(null);
+        return;
+      }
+
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
         setFocusedIndex(prevIndex => {
@@ -32,15 +45,13 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
           return nextIndex;
         });
       } else if (event.key === 'Enter' && focusedIndex !== null) {
-        const selectedItem = menuItems[focusedIndex];
-        const isSelected = selectedMenuItems.some(item => item.id === selectedItem.id);
-        isSelected ? onRemoveCharacter(selectedItem.id) : onSelectCharacter(selectedItem);
+        handleFocusedSelection(focusedIndex);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedIndex, menuItems, onSelectCharacter, onRemoveCharacter, selectedMenuItems]);
+  }, [focusedIndex, menuItems.length]);
 
 
   return (
@@ -56,7 +67,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
                   isFocused={index === focusedIndex}
                   onSelectCharacter={onSelectCharacter}
                   onRemoveCharacter={onRemoveCharacter}
-                  highlightQuery={highlightQuery}
+                  getHighlightedParts={getHighlightedParts}
               />
           );
         })}
